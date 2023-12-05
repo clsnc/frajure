@@ -1,0 +1,25 @@
+html, body, #app {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+}
+
+.frame {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    display: flex;
+    gap: 5px;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 250px;
+    height: 250px;
+    border: 1px solid black;
+    padding: 5px;
+}
+
+.frame-input {
+    box-sizing: border-box;
+    resize: none;
+    flex-grow: 1;
+}
