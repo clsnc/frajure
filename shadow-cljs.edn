@@ -6,6 +6,13 @@
                       :output-dir "public/js"
                       :asset-path "/js"
                       :modules    {:app {:entries [frajure.core]}}
-                      :devtools   {:after-load frajure.core/mount-root}}}
+                      :devtools   {:after-load frajure.core/mount-root}}
+                :test {:target     :node-test
+                       :output-to  "test-output.txt"
+                       :asset-path "/js"
+                       :modules    {:app {:entries [frajure.core]}}
+                       :devtools   {:after-load frajure.core/mount-root}
+                       :ns-regexp  ".*"
+                       :autorun    true}}
 
  :dev-http     {3000 {:root "public"}}}
