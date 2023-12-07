@@ -47,6 +47,7 @@
                  clj-eval-func (frj-expr-arr->clj-eval-func frj-arr-tree1)]
              (is (= (clj-eval-func) (vals/clj-int->frj-int 14)))
              (is (= ((frj-expr-arr->clj-eval-func frj-arr-tree2)) (vals/clj-int->frj-int 3)))
+             (is (nil? (frj-expr-arr->clj-eval-func (parse/clj-str-tree->frj-arr-tree []))))
              ;; Notice that the following 2 tests are different: the 1st returns a function that returns nil, but the 2nd 
              ;; returns nil directly. This is because in the first, the operator is a valid expression, though it isn't 
              ;; a valid function. In the second, the operator is not a valid expression because it contains a symbol that 
@@ -58,7 +59,7 @@
     (if (= (count frj-subexprs) 1)
       (frj-expr-tree->clj-eval-func (first frj-subexprs)) ;; A single nested element should be unnested before evaluation.
       (let [subexpr-clj-eval-funcs (mapv frj-expr-tree->clj-eval-func frj-subexprs)]
-        (when-not (u/in? subexpr-clj-eval-funcs nil)
+        (when-not (or (empty? subexpr-clj-eval-funcs) (u/in? subexpr-clj-eval-funcs nil))
           (clj-eval-funcs->expr-clj-eval-func subexpr-clj-eval-funcs))))))
 
 (defn frj-expr-tree->clj-eval-func
