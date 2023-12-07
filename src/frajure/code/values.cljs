@@ -3,6 +3,19 @@
 
 (declare frj->clj)
 
+(defn clj-func->frj-func
+  "Converts a Clojure function to a Frajure function. The resulting function does  
+   not convert inputs to Frajure values."
+  {:test (fn []
+           (let [clj-func #(+ %1 %2)]
+             (is (= (clj-func->frj-func clj-func 2) {::type ::func
+                                                     ::arity 2
+                                                     ::val clj-func}))))}
+  [f arity]
+  {::type ::func
+   ::arity arity
+   ::val f})
+
 (defn clj-int->frj-int
   "Converts a Clojure integer to a Frajure integer."
   {:test (fn []
@@ -58,6 +71,14 @@
   [v]
   (frj-type? ::arr v))
 
+(defn frj-func?
+  "Returns whether v is a Frajure function."
+  {:test (fn []
+           (is (frj-func? (clj-func->frj-func #(%1 %2) 2)))
+           (is (not (frj-func? (clj-int->frj-int 5)))))}
+  [v]
+  (frj-type? ::func v))
+
 (defn frj-sym?
   "Returns whether v is a Frajure symbol."
   {:test (fn []
@@ -65,6 +86,15 @@
            (is (not (frj-sym? (clj-int->frj-int 5)))))}
   [v]
   (frj-type? ::sym v))
+
+(defn frj-func->clj-func
+  "Converts a Frajure function to a Clojure function. The resulting function does 
+   not convert inputs to Clojure values."
+  {:test (fn []
+           (let [f #(+ %1 %2)]
+             (is (= (frj-func->clj-func (clj-func->frj-func f 2)) f))))}
+  [frj-func]
+  (::val frj-func))
 
 (defn frj-int->clj-int
   "Converts a Frajure integer to a Clojure integer."

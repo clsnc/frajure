@@ -15,6 +15,28 @@
   [context sym]
   (context sym))
 
+(defn clj-eval-funcs->expr-clj-eval-func
+  "Takes a vector of Clojure functions that return evaluations of Frajure expressions and 
+   returns another Clojure function that returns the evaluation of that vector as a Frajure 
+   expression. If the operator in the expression is not a Frajure function or is the wrong 
+   arity for the number of parameters in the expression, returns nil."
+  {:test (fn []
+           (let [frj-sum-func (fn [] builtins/frj-sum)
+                 int10-func #(vals/clj-int->frj-int 10)
+                 int7-func #(vals/clj-int->frj-int 7)
+                 int3-func #(vals/clj-int->frj-int 3)]
+             (is (= ((clj-eval-funcs->expr-clj-eval-func [int10-func int7-func frj-sum-func]))
+                    (vals/clj-int->frj-int 17)))
+             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [int7-func frj-sum-func]))))
+             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [int7-func int10-func int3-func frj-sum-func]))))
+             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [int3-func int7-func]))))))}
+  [fs]
+  ;; Notice that this whole block is a function that will be returned.
+  #(let [[param-funcs op-func] (u/split-vec-at-last fs)
+         frj-op (op-func)]
+     (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count param-funcs)))
+       (apply (vals/frj-func->clj-func frj-op) param-funcs))))
+
 (defn- frj-expr-arr->clj-eval-func
   "Returns a Clojure function that returns the evaluation of a Frajure expression array."
   {:test (fn []
@@ -37,8 +59,7 @@
       (frj-expr-tree->clj-eval-func (first frj-subexprs)) ;; A single nested element should be unnested before evaluation.
       (let [subexpr-clj-eval-funcs (mapv frj-expr-tree->clj-eval-func frj-subexprs)]
         (when-not (u/in? subexpr-clj-eval-funcs nil)
-          (let [[param-eval-funcs op-eval-func] (u/split-vec-at-last subexpr-clj-eval-funcs)]
-            #(apply (op-eval-func) param-eval-funcs)))))))
+          (clj-eval-funcs->expr-clj-eval-func subexpr-clj-eval-funcs))))))
 
 (defn frj-expr-tree->clj-eval-func
   "Returns a function that returns the evaluation of a Frajure expression tree."
