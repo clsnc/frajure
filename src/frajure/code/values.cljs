@@ -45,7 +45,9 @@
              (is (= (clj-seq-of-frj-vals->frj-arr [sym1 int2 arr1]) {::type ::arr
                                                                      ::val [sym1 int2 arr1]}))
              (is (= (clj-seq-of-frj-vals->frj-arr (list int1 int2 sym1)) {::type ::arr
-                                                                          ::val [int1 int2 sym1]}))))}
+                                                                          ::val [int1 int2 sym1]}))
+             (is (= (clj-seq-of-frj-vals->frj-arr []) {::type ::arr
+                                                       ::val []}))))}
   [clj-seq]
   {::type ::arr
    ::val (vec clj-seq)})
