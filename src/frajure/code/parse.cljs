@@ -47,7 +47,8 @@
                     (vals/clj-seq-of-frj-vals->frj-arr
                      [(vals/clj-seq-of-frj-vals->frj-arr
                        [(clj-str->frj-val "nested-deep")])])])
-                  (clj-str->frj-val "end")]))))}
+                  (clj-str->frj-val "end")])))
+           (is (= (clj-str-tree->frj-arr-tree []) (vals/clj-seq-of-frj-vals->frj-arr []))))}
   [clj-str-tree]
   (if (string? clj-str-tree)
     (clj-str->frj-val clj-str-tree)
