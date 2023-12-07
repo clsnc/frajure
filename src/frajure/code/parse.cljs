@@ -1,14 +1,30 @@
 (ns frajure.code.parse
-  (:require [clojure.string :as str]
-            [clojure.test :refer [is]]
+  (:require [clojure.test :refer [is]]
+            [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]))
 
-(defn str->parse-tree
-  "Parses a Clojure string into a tree of strings."
+(defn tokens->parse-tree
+  "Converts a sequence of tokens to a parse tree."
   {:test (fn []
-           (is (= (str->parse-tree "these are    some\twords") ["these" "are" "some" "words"])))}
-  [text]
-  (vec (str/split text #"[ \t]+"))) ;; split on tabs or spaces
+           (is (= (tokens->parse-tree (tok/tokenize-line "a test expr")) ["a" "test" "expr"]))
+           (is (= (tokens->parse-tree (tok/tokenize-line "some (parens (close) properly)")) ["some" ["parens" ["close"] "properly"]]))
+           (is (= (tokens->parse-tree (tok/tokenize-line "(extra nesting)")) [["extra" "nesting"]]))
+           (is (nil? (tokens->parse-tree (tok/tokenize-line "some (parens (close) improperly"))))
+           (is (nil? (tokens->parse-tree (tok/tokenize-line "too (much (closing)))")))))}
+  [tokens]
+  (loop [tokens tokens
+         curr-expr []
+         expr-stack []]
+    (let [[curr-token & rest-tokens] tokens]
+      (if curr-token
+        (cond
+          (tok/whitespace-token? curr-token) (recur rest-tokens curr-expr expr-stack)
+          (tok/open-paren-token? curr-token) (recur rest-tokens [] (conj expr-stack curr-expr))
+          (tok/close-paren-token? curr-token) (when (not-empty expr-stack)
+                                                (recur rest-tokens (conj (peek expr-stack) curr-expr) (pop expr-stack)))
+          :else (recur rest-tokens (conj curr-expr curr-token) expr-stack))
+        (when (empty? expr-stack)
+          curr-expr)))))
 
 (defn- clj-str->clj-int
   "Converts text to an integer. Returns nil if the text is not a valid integer."

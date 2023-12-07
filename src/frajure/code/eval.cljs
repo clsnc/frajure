@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [is]]
             [frajure.code.builtins :as builtins]
             [frajure.code.parse :as parse]
+            [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]
             [frajure.utils :as u]))
 
@@ -79,10 +80,13 @@
   "Evaluates a Clojure string of a Frajure expression and returns a Frajure value."
   {:test (fn []
            (is (= (eval-clj-str-of-frj-expr "3") (vals/clj-int->frj-int 3)))
-           (is (= (eval-clj-str-of-frj-expr "5 19 sum") (vals/clj-int->frj-int 24))))}
+           (is (= (eval-clj-str-of-frj-expr "5 19 sum") (vals/clj-int->frj-int 24)))
+           (is (= (eval-clj-str-of-frj-expr "(2 3 sum) (6 (1 7 sum) sum) sum") (vals/clj-int->frj-int 19)))
+           (is (nil? (eval-clj-str-of-frj-expr ""))))}
   [clj-str]
   (let [eval-func (-> clj-str
-                      (parse/str->parse-tree)
+                      (tok/tokenize-line)
+                      (parse/tokens->parse-tree)
                       (parse/clj-str-tree->frj-arr-tree)
                       (frj-expr-tree->clj-eval-func))]
     (when eval-func
