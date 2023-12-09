@@ -41,3 +41,13 @@
   [token]
   (let [first-char (first token)]
     (boolean (or (= first-char " ") (= first-char "\t")))))
+
+(defn sym-token?
+  "Returns whether a token is a symbol."
+  {:test (fn []
+           (is (sym-token? "sym"))
+           (is (not (sym-token? " ")))
+           (is (not (sym-token? "(")))
+           (is (not (sym-token? ")"))))}
+  [token]
+  (not (or (open-paren-token? token) (close-paren-token? token) (whitespace-token? token))))
