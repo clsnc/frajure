@@ -8,6 +8,10 @@ start a ClojureScript REPL
 ```
 npx shadow-cljs browser-repl
 ```
+### Running tests
+```
+npx shadow-cljs compile test
+```
 ### Building for production
 
 ```
