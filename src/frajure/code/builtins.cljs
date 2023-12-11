@@ -14,4 +14,4 @@
 (def frj-sum (vals/clj-func->frj-func sum-2-frj-ints 2))
 
 (def default-context
-  {(vals/clj-str->frj-sym "sum") (fn [] frj-sum)})
+  {"sum" (fn [] frj-sum)})

@@ -1,20 +1,35 @@
 (ns frajure.code.eval
   (:require [clojure.test :refer [is]]
             [frajure.code.builtins :as builtins]
+            [frajure.code.db :as cdb]
             [frajure.code.parse :as parse]
             [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]
             [frajure.utils :as u]))
 
-(declare frj-expr-tree->clj-eval-func)
+(declare frj-expr-id->clj-eval-func)
 
-(defn- frj-context+sym->clj-eval-func
-  "Resolves a Frajure symbol to a Clojure evaluation function in a given context."
+(defn- sym-expr-id->clj-eval-func
+  "Given a database and a symbol expression ID, returns a function that evaluates the symbol."
   {:test (fn []
-           (is (= ((frj-context+sym->clj-eval-func builtins/default-context (vals/clj-str->frj-sym "sum"))) builtins/frj-sum))
-           (is (nil? (frj-context+sym->clj-eval-func builtins/default-context (vals/clj-str->frj-sym "not-real")))))}
-  [context sym]
-  (context sym))
+           (let [db (cdb/parse-tree->db ["sum"])]
+             (is (= ((sym-expr-id->clj-eval-func db 2)) builtins/frj-sum))))}
+  [db expr-id]
+  (builtins/default-context (cdb/term-expr-id->term-text db expr-id)))
+
+(defn- term-expr-id->clj-eval-func
+  "Resolves a term expression to an evaluation function."
+  {:test (fn []
+           (let [db (cdb/parse-tree->db ["a" "2" "sum"])]
+             (is (= ((term-expr-id->clj-eval-func db 4)) builtins/frj-sum))
+             (is (= ((term-expr-id->clj-eval-func db 3)) (vals/clj-int->frj-int 2)))
+             (is (nil? (term-expr-id->clj-eval-func db 2)))))}
+  [db expr-id]
+  (let [text (cdb/term-expr-id->term-text db expr-id)
+        parsed-int (parse/clj-str->clj-int text)]
+    (if parsed-int
+      #(vals/clj-int->frj-int parsed-int)
+      (sym-expr-id->clj-eval-func db expr-id))))
 
 (defn clj-eval-funcs->expr-clj-eval-func
   "Takes a vector of Clojure functions that return evaluations of Frajure expressions and 
@@ -38,43 +53,41 @@
      (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count param-funcs)))
        (apply (vals/frj-func->clj-func frj-op) param-funcs))))
 
-(defn- frj-expr-arr->clj-eval-func
+(defn- frj-cmpd-expr-id->clj-eval-func
   "Returns a Clojure function that returns the evaluation of a Frajure expression array."
   {:test (fn []
-           (let [frj-arr-tree1 (parse/clj-str-tree->frj-arr-tree ["1" ["8" "5" "sum"] "sum"])
-                 frj-arr-tree2 (parse/clj-str-tree->frj-arr-tree ["3"])
-                 frj-arr-tree3 (parse/clj-str-tree->frj-arr-tree ["4" "5"])
-                 frj-arr-tree4 (parse/clj-str-tree->frj-arr-tree ["3" "2" "unresolvable-sym"])
-                 clj-eval-func (frj-expr-arr->clj-eval-func frj-arr-tree1)]
+           (let [db1 (cdb/parse-tree->db ["1" ["8" "5" "sum"] "sum"])
+                 db2 (cdb/parse-tree->db ["3"])
+                 db3 (cdb/parse-tree->db ["4" "5"])
+                 db4 (cdb/parse-tree->db ["3" "2" "unresolvable-sym"])
+                 clj-eval-func (frj-cmpd-expr-id->clj-eval-func db1 1)]
              (is (= (clj-eval-func) (vals/clj-int->frj-int 14)))
-             (is (= ((frj-expr-arr->clj-eval-func frj-arr-tree2)) (vals/clj-int->frj-int 3)))
-             (is (nil? (frj-expr-arr->clj-eval-func (parse/clj-str-tree->frj-arr-tree []))))
+             (is (= ((frj-cmpd-expr-id->clj-eval-func db2 1)) (vals/clj-int->frj-int 3)))
+             (is (nil? (frj-cmpd-expr-id->clj-eval-func (cdb/parse-tree->db []) 1)))
              ;; Notice that the following 2 tests are different: the 1st returns a function that returns nil, but the 2nd 
              ;; returns nil directly. This is because in the first, the operator is a valid expression, though it isn't 
              ;; a valid function. In the second, the operator is not a valid expression because it contains a symbol that 
              ;; cannot be resolved.
-             (is (nil? ((frj-expr-arr->clj-eval-func frj-arr-tree3))))
-             (is (nil? (frj-expr-arr->clj-eval-func frj-arr-tree4)))))}
-  [frj-arr]
-  (let [frj-subexprs (vals/shallow-frj-arr->clj-vec frj-arr)]
-    (if (= (count frj-subexprs) 1)
-      (frj-expr-tree->clj-eval-func (first frj-subexprs)) ;; A single nested element should be unnested before evaluation.
-      (let [subexpr-clj-eval-funcs (mapv frj-expr-tree->clj-eval-func frj-subexprs)]
+             (is (nil? ((frj-cmpd-expr-id->clj-eval-func db3 1))))
+             (is (nil? (frj-cmpd-expr-id->clj-eval-func db4 1)))))}
+  [db expr-id]
+  (let [subexpr-ids (vec (cdb/expr-id->ordered-subexpr-ids db expr-id))]
+    (if (= (count subexpr-ids) 1)
+      (frj-expr-id->clj-eval-func db (first subexpr-ids)) ;; A single nested element should be unnested before evaluation.
+      (let [subexpr-clj-eval-funcs (mapv #(frj-expr-id->clj-eval-func db %) subexpr-ids)]
         (when-not (or (empty? subexpr-clj-eval-funcs) (u/in? subexpr-clj-eval-funcs nil))
           (clj-eval-funcs->expr-clj-eval-func subexpr-clj-eval-funcs))))))
 
-(defn frj-expr-tree->clj-eval-func
-  "Returns a function that returns the evaluation of a Frajure expression tree."
+(defn frj-expr-id->clj-eval-func
+  "Returns a function that returns the evaluation of a Frajure expression."
   {:test (fn []
-           (let [int1 (vals/clj-int->frj-int 1)
-                 frj-tree (parse/clj-str-tree->frj-arr-tree [["4" ["6" "8" "sum"] "sum"] "2" "sum"])]
-             (is (= ((frj-expr-tree->clj-eval-func int1)) int1))
-             (is (= ((frj-expr-tree->clj-eval-func frj-tree)) (vals/clj-int->frj-int 20)))))}
-  [frj-tree]
-  (cond
-    (vals/frj-arr? frj-tree) (frj-expr-arr->clj-eval-func frj-tree)
-    (vals/frj-sym? frj-tree) (frj-context+sym->clj-eval-func builtins/default-context frj-tree)
-    :else (fn [] frj-tree)))
+           (let [db (cdb/parse-tree->db [["4" ["6" "8" "sum"] "sum"] "2" "sum"])]
+             (is (= ((frj-expr-id->clj-eval-func db 3)) (vals/clj-int->frj-int 4)))
+             (is (= ((frj-expr-id->clj-eval-func db 1)) (vals/clj-int->frj-int 20)))))}
+  [db expr-id]
+  (if (cdb/term-expr-id? db expr-id)
+    (term-expr-id->clj-eval-func db expr-id)
+    (frj-cmpd-expr-id->clj-eval-func db expr-id)))
 
 (defn eval-clj-str-of-frj-expr
   "Evaluates a Clojure string of a Frajure expression and returns a Frajure value."
@@ -87,7 +100,7 @@
   (let [eval-func (-> clj-str
                       (tok/tokenize-line)
                       (parse/tokens->parse-tree)
-                      (parse/clj-str-tree->frj-arr-tree)
-                      (frj-expr-tree->clj-eval-func))]
+                      (cdb/parse-tree->db)
+                      (frj-expr-id->clj-eval-func 1))]
     (when eval-func
       (eval-func))))

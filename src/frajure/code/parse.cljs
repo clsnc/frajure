@@ -26,7 +26,7 @@
         (when (empty? expr-stack)
           curr-expr)))))
 
-(defn- clj-str->clj-int
+(defn clj-str->clj-int
   "Converts text to an integer. Returns nil if the text is not a valid integer."
   {:test (fn []
            (is (= (clj-str->clj-int "58") 58))
