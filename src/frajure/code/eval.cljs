@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [is]]
             [frajure.code.builtins :as builtins]
             [frajure.code.db :as cdb]
+            [frajure.code.expressions :as exprs]
             [frajure.code.parse :as parse]
             [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]
@@ -48,7 +49,8 @@
              (is (nil? ((clj-eval-funcs->expr-clj-eval-func [int3-func int7-func]))))))}
   [fs]
   ;; Notice that this whole block is a function that will be returned.
-  #(let [[param-funcs op-func] (u/split-vec-at-last fs)
+  #(let [op-func (exprs/op-element fs)
+         param-funcs (exprs/arg-elements fs)
          frj-op (op-func)]
      (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count param-funcs)))
        (apply (vals/frj-func->clj-func frj-op) param-funcs))))

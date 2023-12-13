@@ -2,6 +2,7 @@
   (:require [clojure.core.rrb-vector :as v]
             [clojure.test :refer [is]]
             [datascript.core :as d]
+            [frajure.code.expressions :as exprs]
             [medley.core :as m]))
 
 (declare expr-tx-items term-expr-id? term-expr-id->term-text)
@@ -194,7 +195,7 @@
            (is (not (def-expr-id? (parse-tree->db ["5" "num" "d"]) 1))))}
   [db expr-id]
   (let [subexpr-ids (expr-id->ordered-subexpr-ids db expr-id)
-        op-expr-id (last subexpr-ids)
+        op-expr-id (exprs/op-element subexpr-ids)
         op-term-text (term-expr-id->term-text db op-expr-id)]
     (= op-term-text "def")))
 
