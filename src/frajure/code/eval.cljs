@@ -36,7 +36,7 @@
   "Takes a vector of Clojure functions that return evaluations of Frajure expressions and 
    returns another Clojure function that returns the evaluation of that vector as a Frajure 
    expression. If the operator in the expression is not a Frajure function or is the wrong 
-   arity for the number of parameters in the expression, returns nil."
+   arity for the number of arguments in the expression, returns nil."
   {:test (fn []
            (let [frj-sum-func (fn [] builtins/frj-sum)
                  int10-func #(vals/clj-int->frj-int 10)
@@ -50,10 +50,10 @@
   [fs]
   ;; Notice that this whole block is a function that will be returned.
   #(let [op-func (exprs/op-element fs)
-         param-funcs (exprs/arg-elements fs)
+         arg-funcs (exprs/arg-elements fs)
          frj-op (op-func)]
-     (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count param-funcs)))
-       (apply (vals/frj-func->clj-func frj-op) param-funcs))))
+     (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count arg-funcs)))
+       (apply (vals/frj-func->clj-func frj-op) arg-funcs))))
 
 (defn- frj-cmpd-expr-id->clj-eval-func
   "Returns a Clojure function that returns the evaluation of a Frajure expression array."
