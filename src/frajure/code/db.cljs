@@ -215,16 +215,19 @@
            (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db [["def" "a" "1" "9"] ["2" ["3" "a" "b"] "c"]]) 7 "a")))
            (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "1" ["def" "a" "3"] "b"]) 1 "b")))
            (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "1" "2"]) 2 "a")))
-           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["1" ["def" "a" "3"] ["sum" "2" "3"] "sum"]) 7 "a"))))}
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["1" ["def" "a" "3"] ["sum" "2" "3"] "sum"]) 7 "a")))
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "a" ["def" "a"] "2"]) 1 "a"))))}
   [db expr-id sym-name]
-  (first (map first (d/q `[:find ?def-expr-id :where
-                           [?def-expr-id ::parent ~expr-id]
-                           [?def-term ::parent ?def-expr-id]
-                           [?def-term ::pos 0]
-                           [?def-term ::text "def"]
-                           [?name-term ::parent ?def-expr-id]
-                           [?name-term ::pos 1]
-                           [?name-term ::text ~sym-name]]
+  (first (map first (d/q `[:find ?expr-id :where
+                           [?expr-id ::parent ~expr-id]
+                           [?def-op-term-id ::parent ?expr-id]
+                           [?def-op-term-id ::pos 0]
+                           [?def-op-term-id ::text "def"]
+                           [?name-term-id ::parent ?expr-id]
+                           [?name-term-id ::pos 1]
+                           [?name-term-id ::text ~sym-name]
+                           [?def-expr-id ::parent ?expr-id]
+                           [?def-expr-id ::pos 2]]
                          db))))
 
 (defn expr-id->ordered-nondef-subexpr-ids
