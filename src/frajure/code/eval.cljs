@@ -10,13 +10,35 @@
 
 (declare frj-expr-id->clj-eval-func)
 
+(defn- sym-expr-id->defined-eval-func
+  "Returns a function that evaluates a symbol based on definitions in its context. Does not use built-in definitions. Returns 
+   nil if no definition is found."
+  {:test (fn []
+           (is (= ((sym-expr-id->defined-eval-func (cdb/parse-tree->db ["sum" "1" "a" ["def" "a" "14"]]) 4)) (vals/clj-int->frj-int 14)))
+           (is (= ((sym-expr-id->defined-eval-func
+                    (cdb/parse-tree->db [["def" "a" "1" "9"] ["2" ["3" "a" "b"] "c"]]) 11))
+                  (vals/clj-int->frj-int 9)))
+           (is (nil? (sym-expr-id->defined-eval-func (cdb/parse-tree->db ["sum" ["def" "a" "1"] [["b"]] "8"]) 9))))}
+  [db expr-id]
+  (let [sym-name (cdb/term-expr-id->term-text db expr-id)]
+    (loop [search-expr-id expr-id]
+      (when search-expr-id
+        (let [local-definition-expr-id (cdb/expr-id->sym-def-subexpr-id db search-expr-id sym-name)]
+          (if local-definition-expr-id
+            (frj-expr-id->clj-eval-func db (cdb/expr-id->last-nondef-subexpr-id db local-definition-expr-id)) ;; use the last subexpression
+            (recur (cdb/expr-id->parent-expr-id db search-expr-id))))))))
+
 (defn- sym-expr-id->clj-eval-func
   "Given a database and a symbol expression ID, returns a function that evaluates the symbol."
   {:test (fn []
            (let [db (cdb/parse-tree->db ["sum"])]
-             (is (= ((sym-expr-id->clj-eval-func db 2)) builtins/frj-sum))))}
+             (is (= ((sym-expr-id->clj-eval-func db 2)) builtins/frj-sum))
+             (is (= ((sym-expr-id->clj-eval-func (cdb/parse-tree->db ["sum" ["def" "a" "3"] "a" "a"]) 7)) (vals/clj-int->frj-int 3)))))}
   [db expr-id]
-  (builtins/default-context (cdb/term-expr-id->term-text db expr-id)))
+  (let [found-def-eval-func (sym-expr-id->defined-eval-func db expr-id)]
+    (if found-def-eval-func
+      found-def-eval-func
+      (builtins/default-context (cdb/term-expr-id->term-text db expr-id)))))
 
 (defn- term-expr-id->clj-eval-func
   "Resolves a term expression to an evaluation function."

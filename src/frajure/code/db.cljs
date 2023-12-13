@@ -162,6 +162,14 @@
         ordered-subexprs (sort-by ::pos subexprs)]
     (map :db/id ordered-subexprs)))
 
+(defn expr-id->parent-expr-id
+  "Returns the ID of an expression's parent or nil if it has none."
+  {:test (fn []
+           (is (= (expr-id->parent-expr-id (parse-tree->db ["2"]) 2) 1))
+           (is (nil? (expr-id->parent-expr-id (parse-tree->db []) 1))))}
+  [db expr-id]
+  (:db/id (::parent (d/entity db expr-id))))
+
 (defn expr-id->expr-type
   "Given a database and an expression ID, returns the expression type."
   {:test (fn []
@@ -199,9 +207,37 @@
         op-term-text (term-expr-id->term-text db op-expr-id)]
     (= op-term-text "def")))
 
+(defn expr-id->sym-def-subexpr-id
+  "Returns the ID of a subexpression that is a definition expression for the given symbol. If a matching definition 
+   expression is not found, returns nil."
+  {:test (fn []
+           (is (= (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "1" ["def" "a" "3"] "a"]) 1 "a") 4))
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db [["def" "a" "1" "9"] ["2" ["3" "a" "b"] "c"]]) 7 "a")))
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "1" ["def" "a" "3"] "b"]) 1 "b")))
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["sum" "1" "2"]) 2 "a")))
+           (is (nil? (expr-id->sym-def-subexpr-id (parse-tree->db ["1" ["def" "a" "3"] ["sum" "2" "3"] "sum"]) 7 "a"))))}
+  [db expr-id sym-name]
+  (first (map first (d/q `[:find ?def-expr-id :where
+                           [?def-expr-id ::parent ~expr-id]
+                           [?def-term ::parent ?def-expr-id]
+                           [?def-term ::pos 0]
+                           [?def-term ::text "def"]
+                           [?name-term ::parent ?def-expr-id]
+                           [?name-term ::pos 1]
+                           [?name-term ::text ~sym-name]]
+                         db))))
+
 (defn expr-id->ordered-nondef-subexpr-ids
   "Returns an expression's nondefinitional subexpression IDs in order of their position in the expression."
   {:test (fn []
            (is (= (vec (expr-id->ordered-nondef-subexpr-ids (parse-tree->db ["1" ["def" "3" "a"] "a" "sum"]) 1)) [2 7 8])))}
   [db expr-id]
   (filter #(not (def-expr-id? db %)) (expr-id->ordered-subexpr-ids db expr-id)))
+
+(defn expr-id->last-nondef-subexpr-id
+  "Returns the last nondefinitional subexpression of a given expression or nil if there are none."
+  {:test (fn []
+           (is (= (expr-id->last-nondef-subexpr-id (parse-tree->db ["1" "2" ["def" "a" "5"] "sum"]) 1) 8))
+           (is (nil? (expr-id->last-nondef-subexpr-id (parse-tree->db [["def" "a" "6"]]) 1))))}
+  [db expr-id]
+  (last (expr-id->ordered-nondef-subexpr-ids db expr-id)))
