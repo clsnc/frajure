@@ -69,12 +69,13 @@
              ;; a valid function. In the second, the operator is not a valid expression because it contains a symbol that 
              ;; cannot be resolved.
              (is (nil? ((frj-cmpd-expr-id->clj-eval-func db3 1))))
-             (is (nil? (frj-cmpd-expr-id->clj-eval-func db4 1)))))}
+             (is (nil? (frj-cmpd-expr-id->clj-eval-func db4 1)))
+             (is (= ((frj-cmpd-expr-id->clj-eval-func (cdb/parse-tree->db ["1" "2" ["5" "a" "def"] "sum"]) 1)) (vals/clj-int->frj-int 3)))))}
   [db expr-id]
-  (let [subexpr-ids (vec (cdb/expr-id->ordered-subexpr-ids db expr-id))]
-    (if (= (count subexpr-ids) 1)
-      (frj-expr-id->clj-eval-func db (first subexpr-ids)) ;; A single nested element should be unnested before evaluation.
-      (let [subexpr-clj-eval-funcs (mapv #(frj-expr-id->clj-eval-func db %) subexpr-ids)]
+  (let [nondef-subexpr-ids (cdb/expr-id->ordered-nondef-subexpr-ids db expr-id)]
+    (if (= (count nondef-subexpr-ids) 1)
+      (frj-expr-id->clj-eval-func db (first nondef-subexpr-ids)) ;; A single nested element should be unnested before evaluation.
+      (let [subexpr-clj-eval-funcs (mapv #(frj-expr-id->clj-eval-func db %) nondef-subexpr-ids)]
         (when-not (or (empty? subexpr-clj-eval-funcs) (u/in? subexpr-clj-eval-funcs nil))
           (clj-eval-funcs->expr-clj-eval-func subexpr-clj-eval-funcs))))))
 

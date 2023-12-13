@@ -186,3 +186,21 @@
            (is (= (term-expr-id->term-text (db-add-expr-from-parse-tree default-db "1") 1) "1")))}
   [db expr-id]
   (::text (d/entity db expr-id)))
+
+(defn def-expr-id?
+  "Returns whether an expression is a definition expression."
+  {:test (fn []
+           (is (def-expr-id? (parse-tree->db ["5" "num" "def"]) 1))
+           (is (not (def-expr-id? (parse-tree->db ["5" "num" "d"]) 1))))}
+  [db expr-id]
+  (let [subexpr-ids (expr-id->ordered-subexpr-ids db expr-id)
+        op-expr-id (last subexpr-ids)
+        op-term-text (term-expr-id->term-text db op-expr-id)]
+    (= op-term-text "def")))
+
+(defn expr-id->ordered-nondef-subexpr-ids
+  "Returns an expression's nondefinitional subexpression IDs in order of their position in the expression."
+  {:test (fn []
+           (is (= (vec (expr-id->ordered-nondef-subexpr-ids (parse-tree->db ["1" ["3" "a" "def"] "a" "sum"]) 1)) [2 7 8])))}
+  [db expr-id]
+  (filter #(not (def-expr-id? db %)) (expr-id->ordered-subexpr-ids db expr-id)))
