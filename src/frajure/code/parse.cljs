@@ -1,5 +1,8 @@
 (ns frajure.code.parse
-  (:require [clojure.test :refer [is]]
+  (:require [clojure.core.rrb-vector :as v]
+            [clojure.string :as str]
+            [clojure.test :refer [is]]
+            [frajure.code.db :as cdb]
             [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]))
 
@@ -25,6 +28,19 @@
           :else (recur rest-tokens (conj curr-expr curr-token) expr-stack))
         (when (empty? expr-stack)
           curr-expr)))))
+
+(defn pane-text->parse-tree
+  "Given the text of a pane, returns the parse tree for that pane."
+  {:test (fn []
+           (is (= (pane-text->parse-tree "a b c\ne (f g)") [::cdb/pane ["a" "b" "c"] ["e" ["f" "g"]]]))
+           (is (= (pane-text->parse-tree "a\n\nb\n") [::cdb/pane ["a"] ["b"]]))
+           (is (= (pane-text->parse-tree "a\nb (\nc") [::cdb/pane ["a"] ["c"]]))
+           (is (= (pane-text->parse-tree "") [::cdb/pane])))}
+  [pane-text]
+  (let [lines (filter not-empty (str/split-lines pane-text))
+        line-token-seqs (map tok/tokenize-line lines)
+        line-parse-trees (filterv some? (map tokens->parse-tree line-token-seqs))]
+    (v/catvec [::cdb/pane] line-parse-trees)))
 
 (defn clj-str->clj-int
   "Converts text to an integer. Returns nil if the text is not a valid integer."

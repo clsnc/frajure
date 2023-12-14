@@ -81,6 +81,16 @@
   [v]
   (frj-type? ::func v))
 
+(defn frj-func-accepts-arity?
+  "Returns whether a Frajure function accepts a given arity."
+  {:test (fn []
+           (is (frj-func-accepts-arity? (clj-func->frj-func + 5) 5))
+           (is (frj-func-accepts-arity? (clj-func->frj-func + nil) 5))
+           (is (not (frj-func-accepts-arity? (clj-func->frj-func + 3) 5))))}
+  [f arity]
+  (let [f-arity (::arity f)]
+    (or (nil? f-arity) (= f-arity arity))))
+
 (defn frj-sym?
   "Returns whether v is a Frajure symbol."
   {:test (fn []

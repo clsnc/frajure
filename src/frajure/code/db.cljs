@@ -101,6 +101,12 @@
                                                                 ::parent -10
                                                                 ::pos 3
                                                                 ::text "sym"}]}))
+           (is (= (expr-tx-items ::pane 0 -14 -15) {::next-temp-id -16
+                                                    ::tx-items [{:db/id -15
+                                                                 ::type ::term-expr
+                                                                 ::parent -14
+                                                                 ::pos 0
+                                                                 ::text ::pane}]}))
            (is (= (expr-tx-items [["a" "b"] "c"] 0 -8 -9) {::next-temp-id -14
                                                            ::tx-items [{:db/id -9
                                                                         ::type ::cmpd-expr
@@ -126,7 +132,7 @@
                                                                         ::pos 1
                                                                         ::text "c"}]})))}
   [expr pos parent-temp-id next-temp-id]
-  ((if (string? expr)
+  ((if (or (string? expr) (keyword? expr))
      term-expr-tx-items
      cmpd-expr-tx-items) expr pos parent-temp-id next-temp-id))
 

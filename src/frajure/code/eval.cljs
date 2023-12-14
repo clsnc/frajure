@@ -4,7 +4,6 @@
             [frajure.code.db :as cdb]
             [frajure.code.expressions :as exprs]
             [frajure.code.parse :as parse]
-            [frajure.code.tokenize :as tok]
             [frajure.code.values :as vals]
             [frajure.utils :as u]))
 
@@ -74,7 +73,7 @@
   #(let [op-func (exprs/op-element fs)
          arg-funcs (exprs/arg-elements fs)
          frj-op (op-func)]
-     (when (and (vals/frj-func? frj-op) (= (::vals/arity frj-op) (count arg-funcs)))
+     (when (and (vals/frj-func? frj-op) (vals/frj-func-accepts-arity? frj-op (count arg-funcs)))
        (apply (vals/frj-func->clj-func frj-op) arg-funcs))))
 
 (defn- frj-cmpd-expr-id->clj-eval-func
@@ -123,8 +122,7 @@
            (is (nil? (eval-clj-str-of-frj-expr ""))))}
   [clj-str]
   (let [eval-func (-> clj-str
-                      (tok/tokenize-line)
-                      (parse/tokens->parse-tree)
+                      (parse/pane-text->parse-tree)
                       (cdb/parse-tree->db)
                       (frj-expr-id->clj-eval-func 1))]
     (when eval-func

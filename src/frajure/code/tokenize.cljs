@@ -20,6 +20,14 @@
   [token]
   (= token ")"))
 
+(defn newline-token?
+  "Returns whether a token is a newline token."
+  {:test (fn []
+           (is (newline-token? "\n"))
+           (is (not (newline-token? "\t"))))}
+  [token]
+  (= token "\n"))
+
 (defn open-paren-token?
   "Returns whether a token is an opening parenthesis."
   {:test (fn []
