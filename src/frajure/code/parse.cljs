@@ -35,12 +35,12 @@
            (is (= (pane-text->parse-tree "a b c\ne (f g)") [::cdb/pane ["a" "b" "c"] ["e" ["f" "g"]]]))
            (is (= (pane-text->parse-tree "a\n\nb\n") [::cdb/pane ["a"] ["b"]]))
            (is (= (pane-text->parse-tree "a\nb (\nc") [::cdb/pane ["a"] ["c"]]))
-           (is (= (pane-text->parse-tree "") [::cdb/pane])))}
+           (is (nil? (pane-text->parse-tree ""))))}
   [pane-text]
   (let [lines (filter not-empty (str/split-lines pane-text))
         line-token-seqs (map tok/tokenize-line lines)
         line-parse-trees (filterv some? (map tokens->parse-tree line-token-seqs))]
-    (v/catvec [::cdb/pane] line-parse-trees)))
+    (when (not-empty line-parse-trees) (v/catvec [::cdb/pane] line-parse-trees))))
 
 (defn clj-str->clj-int
   "Converts text to an integer. Returns nil if the text is not a valid integer."
