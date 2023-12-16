@@ -11,10 +11,11 @@
   "Returns the number of tabs at the beginning of a string."
   {:test (fn []
            (is (= (text->indent-depth "\t\t\ttext") 3))
+           (is (= (text->indent-depth "    text ") 4))
            (is (zero? (text->indent-depth "text")))
            (is (zero? (text->indent-depth ""))))}
   [text]
-  (count (take-while #(= \tab %) text)))
+  (count (take-while #(or (= \tab %) (= \space %)) text)))
 
 (defn- text->indent-trees
   "Returns trees of lines of text, with the tree structures derived from line indentations."
