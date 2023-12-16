@@ -22,3 +22,12 @@
            (is (= (split-vec-at-last [6]) [[] 6])))}
   [v]
   [(v/subvec v 0 (dec (count v))) (peek v)])
+
+(defn update-vec-last
+  "Applies update to the last element of a vector."
+  {:test (fn []
+           (is (= (update-vec-last [1 2 3] inc) [1 2 4]))
+           (is (= (update-vec-last [1 2 3] + 9 14) [1 2 26]))
+           (is (= (update-vec-last [1] dec) [0])))}
+  [v f & args]
+  (apply update v (dec (count v)) f args))

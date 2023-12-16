@@ -122,7 +122,7 @@
            (is (nil? (eval-clj-str-of-frj-expr ""))))}
   [clj-str]
   (let [eval-func (-> clj-str
-                      (parse/pane-text->parse-tree)
+                      (parse/pane-text->parse-trees)
                       (cdb/parse-tree->db)
                       (frj-expr-id->clj-eval-func 1))]
     (when eval-func
