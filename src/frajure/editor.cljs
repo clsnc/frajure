@@ -8,5 +8,5 @@
   [text]
   [:div.frame
    [:textarea.frame-input {:value text
-               :onChange #(state/replace-text! (.-value (.-target %)))}]
+                           :onChange #(state/replace-text! (.-value (.-target %)))}]
    [:div.frame-output (str (vals/frj->clj (eval/eval-clj-str-of-frj-expr text)))]])
