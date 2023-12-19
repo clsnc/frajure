@@ -13,17 +13,19 @@
   (let [eval-func (last subexpr-clj-eval-funcs)]
     (when eval-func (eval-func))))
 
-(defn- sum-2-frj-ints
+(defn- sum-frj-ints
   "Sums 2 Frajure integers to return another Frajure integer."
   {:test (fn []
-           (is (= (sum-2-frj-ints #(vals/clj-int->frj-int 8) #(vals/clj-int->frj-int -17))
-                  (vals/clj-int->frj-int -9))))}
-  [frj-int1-eval-func frj-int2-eval-func]
-  (vals/clj-int->frj-int (+ (vals/frj-int->clj-int (frj-int1-eval-func))
-                            (vals/frj-int->clj-int (frj-int2-eval-func)))))
+           (is (= (sum-frj-ints #(vals/clj-int->frj-int 2)) (vals/clj-int->frj-int 2)))
+           (is (= (sum-frj-ints #(vals/clj-int->frj-int 8) #(vals/clj-int->frj-int -17))
+                  (vals/clj-int->frj-int -9)))
+           (is (= (sum-frj-ints #(vals/clj-int->frj-int 3) #(vals/clj-int->frj-int 5) #(vals/clj-int->frj-int 9))
+                  (vals/clj-int->frj-int 17))))}
+  [& frj-int-eval-funcs]
+  (vals/clj-int->frj-int (apply + (map #(vals/frj-int->clj-int (%)) frj-int-eval-funcs))))
 
 (def frj-pane (vals/clj-func->frj-func eval-pane nil))
-(def frj-sum (vals/clj-func->frj-func sum-2-frj-ints 2))
+(def frj-sum (vals/clj-func->frj-func sum-frj-ints 2))
 
 (def default-context
   {::cdb/pane (fn [] frj-pane)
