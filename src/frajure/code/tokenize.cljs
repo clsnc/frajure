@@ -20,14 +20,6 @@
   [token]
   (= token ")"))
 
-(defn newline-token?
-  "Returns whether a token is a newline token."
-  {:test (fn []
-           (is (newline-token? "\n"))
-           (is (not (newline-token? "\t"))))}
-  [token]
-  (= token "\n"))
-
 (defn open-paren-token?
   "Returns whether a token is an opening parenthesis."
   {:test (fn []
@@ -49,13 +41,3 @@
   [token]
   (let [first-char (first token)]
     (boolean (or (= first-char " ") (= first-char "\t")))))
-
-(defn sym-token?
-  "Returns whether a token is a symbol."
-  {:test (fn []
-           (is (sym-token? "sym"))
-           (is (not (sym-token? " ")))
-           (is (not (sym-token? "(")))
-           (is (not (sym-token? ")"))))}
-  [token]
-  (not (or (open-paren-token? token) (close-paren-token? token) (whitespace-token? token))))

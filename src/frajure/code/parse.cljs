@@ -136,23 +136,3 @@
     (if parsed-int
       (vals/clj-int->frj-int parsed-int)
       (vals/clj-str->frj-sym text))))
-
-(defn clj-str-tree->frj-arr-tree
-  "Converts a Clojure string tree (nested Clojure sequences of Clojure strings) to a Frajure 
-   array tree (nested Frajure arrays of Frajure values)."
-  {:test (fn []
-           (is (=
-                (clj-str-tree->frj-arr-tree ["abc" ["123" [["nested-deep"]]] "end"])
-                (vals/clj-seq-of-frj-vals->frj-arr
-                 [(clj-str->frj-val "abc")
-                  (vals/clj-seq-of-frj-vals->frj-arr
-                   [(clj-str->frj-val "123")
-                    (vals/clj-seq-of-frj-vals->frj-arr
-                     [(vals/clj-seq-of-frj-vals->frj-arr
-                       [(clj-str->frj-val "nested-deep")])])])
-                  (clj-str->frj-val "end")])))
-           (is (= (clj-str-tree->frj-arr-tree []) (vals/clj-seq-of-frj-vals->frj-arr []))))}
-  [clj-str-tree]
-  (if (string? clj-str-tree)
-    (clj-str->frj-val clj-str-tree)
-    (vals/clj-seq-of-frj-vals->frj-arr (map clj-str-tree->frj-arr-tree clj-str-tree))))
