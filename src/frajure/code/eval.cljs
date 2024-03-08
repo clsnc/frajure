@@ -4,8 +4,7 @@
             [frajure.code.db :as cdb]
             [frajure.code.expressions :as exprs]
             [frajure.code.parse :as parse]
-            [frajure.code.values :as vals]
-            [frajure.utils :as u]))
+            [frajure.code.values :as vals]))
 
 (declare frj-expr-id->clj-eval-func)
 
@@ -53,28 +52,23 @@
       #(vals/clj-int->frj-int parsed-int)
       (sym-expr-id->clj-eval-func db expr-id))))
 
-(defn clj-eval-funcs->expr-clj-eval-func
-  "Takes a vector of Clojure functions that return evaluations of Frajure expressions and 
-   returns another Clojure function that returns the evaluation of that vector as a Frajure 
-   expression. If the operator in the expression is not a Frajure function or is the wrong 
-   arity for the number of arguments in the expression, returns nil."
+(defn frj-expr-ids->expr-clj-eval-func
+  "Takes a database and a coll of subexpression IDs and returns a Clojure evaluation function for the 
+   Frajure expression consisting of the referenced subexpressions."
   {:test (fn []
-           (let [frj-sum-func (fn [] builtins/frj-sum)
-                 int10-func #(vals/clj-int->frj-int 10)
-                 int7-func #(vals/clj-int->frj-int 7)
-                 int3-func #(vals/clj-int->frj-int 3)]
-             (is (= ((clj-eval-funcs->expr-clj-eval-func [frj-sum-func int10-func int7-func]))
-                    (vals/clj-int->frj-int 17)))
-             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [frj-sum-func int7-func]))))
-             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [frj-sum-func int7-func int10-func int3-func]))))
-             (is (nil? ((clj-eval-funcs->expr-clj-eval-func [int3-func int7-func]))))))}
-  [fs]
-  ;; Notice that this whole block is a function that will be returned.
-  #(let [op-func (exprs/op-element fs)
-         arg-funcs (exprs/arg-elements fs)
-         frj-op (op-func)]
-     (when (and (vals/frj-func? frj-op) (vals/frj-func-accepts-arity? frj-op (count arg-funcs)))
-       (apply (vals/frj-func->clj-func frj-op) arg-funcs))))
+           (let [db (cdb/parse-tree->db ["sum" "2" "5"])
+                 eval-func1 (frj-expr-ids->expr-clj-eval-func db [2 3 4])
+                 eval-func2 (frj-expr-ids->expr-clj-eval-func db [3 4])]
+             (is (= (eval-func1) (vals/clj-int->frj-int 7)))
+             (is (nil? (eval-func2)))))}
+  [db expr-ids]
+  (let [op-expr-id (exprs/op-element expr-ids)
+        arg-expr-ids (exprs/arg-elements expr-ids)
+        op-eval-func (frj-expr-id->clj-eval-func db op-expr-id)]
+    (when op-eval-func
+      (fn [] (let [frj-op (op-eval-func)]
+               (when (and (vals/frj-op? frj-op) (vals/frj-op-accepts-arity? frj-op (count arg-expr-ids)))
+                 (apply (vals/frj-op->clj-func frj-op) #(frj-expr-id->clj-eval-func db %) arg-expr-ids)))))))
 
 (defn- frj-cmpd-expr-id->clj-eval-func
   "Returns a Clojure function that returns the evaluation of a Frajure expression array."
@@ -96,11 +90,10 @@
              (is (= ((frj-cmpd-expr-id->clj-eval-func (cdb/parse-tree->db ["sum" "1" "2" ["def" "5" "a"]]) 1)) (vals/clj-int->frj-int 3)))))}
   [db expr-id]
   (let [nondef-subexpr-ids (cdb/expr-id->ordered-nondef-subexpr-ids db expr-id)]
-    (if (= (count nondef-subexpr-ids) 1)
-      (frj-expr-id->clj-eval-func db (first nondef-subexpr-ids)) ;; A single nested element should be unnested before evaluation.
-      (let [subexpr-clj-eval-funcs (mapv #(frj-expr-id->clj-eval-func db %) nondef-subexpr-ids)]
-        (when-not (or (empty? subexpr-clj-eval-funcs) (u/in? subexpr-clj-eval-funcs nil))
-          (clj-eval-funcs->expr-clj-eval-func subexpr-clj-eval-funcs))))))
+    (condp = (count nondef-subexpr-ids)
+      0 nil
+      1 (frj-expr-id->clj-eval-func db (first nondef-subexpr-ids)) ;; A single nested element should be unnested before evaluation.
+      (frj-expr-ids->expr-clj-eval-func db nondef-subexpr-ids))))
 
 (defn frj-expr-id->clj-eval-func
   "Returns a function that returns the evaluation of a Frajure expression."

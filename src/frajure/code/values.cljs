@@ -3,16 +3,16 @@
 
 (declare frj->clj)
 
-(defn clj-func->frj-func
-  "Converts a Clojure function to a Frajure function. The resulting function does  
+(defn clj-func->frj-op
+  "Converts a Clojure function to a Frajure operator. The resulting operator does  
    not convert inputs to Frajure values."
   {:test (fn []
            (let [clj-func #(+ %1 %2)]
-             (is (= (clj-func->frj-func clj-func 2) {::type ::func
+             (is (= (clj-func->frj-op clj-func 2) {::type ::op
                                                      ::arity 2
                                                      ::val clj-func}))))}
   [f arity]
-  {::type ::func
+  {::type ::op
    ::arity arity
    ::val f})
 
@@ -73,20 +73,20 @@
   [v]
   (frj-type? ::arr v))
 
-(defn frj-func?
-  "Returns whether v is a Frajure function."
+(defn frj-op?
+  "Returns whether v is a Frajure operator."
   {:test (fn []
-           (is (frj-func? (clj-func->frj-func #(%1 %2) 2)))
-           (is (not (frj-func? (clj-int->frj-int 5)))))}
+           (is (frj-op? (clj-func->frj-op #(%1 %2) 2)))
+           (is (not (frj-op? (clj-int->frj-int 5)))))}
   [v]
-  (frj-type? ::func v))
+  (frj-type? ::op v))
 
-(defn frj-func-accepts-arity?
-  "Returns whether a Frajure function accepts a given arity."
+(defn frj-op-accepts-arity?
+  "Returns whether a Frajure operation accepts a given arity."
   {:test (fn []
-           (is (frj-func-accepts-arity? (clj-func->frj-func + 5) 5))
-           (is (frj-func-accepts-arity? (clj-func->frj-func + nil) 5))
-           (is (not (frj-func-accepts-arity? (clj-func->frj-func + 3) 5))))}
+           (is (frj-op-accepts-arity? (clj-func->frj-op + 5) 5))
+           (is (frj-op-accepts-arity? (clj-func->frj-op + nil) 5))
+           (is (not (frj-op-accepts-arity? (clj-func->frj-op + 3) 5))))}
   [f arity]
   (let [f-arity (::arity f)]
     (or (nil? f-arity) (= f-arity arity))))
@@ -99,14 +99,14 @@
   [v]
   (frj-type? ::sym v))
 
-(defn frj-func->clj-func
-  "Converts a Frajure function to a Clojure function. The resulting function does 
+(defn frj-op->clj-func
+  "Converts a Frajure operator to a Clojure function. The resulting function does 
    not convert inputs to Clojure values."
   {:test (fn []
            (let [f #(+ %1 %2)]
-             (is (= (frj-func->clj-func (clj-func->frj-func f 2)) f))))}
-  [frj-func]
-  (::val frj-func))
+             (is (= (frj-op->clj-func (clj-func->frj-op f 2)) f))))}
+  [frj-op]
+  (::val frj-op))
 
 (defn frj-int->clj-int
   "Converts a Frajure integer to a Clojure integer."
@@ -138,6 +138,23 @@
              (is (= (deep-frj-arr->clj-vec arr2) [3 [1 2]]))))}
   [frj-arr]
   (mapv frj->clj (shallow-frj-arr->clj-vec frj-arr)))
+
+(defn clj-func->frj-func
+  "Takes a Clojure function that accepts and returns Frajure values and returns a Frajure operator implementing 
+   that Clojure function as a Frajure function."
+  {:test (fn []
+           (let [frj-expr-id->clj-eval-func {:expr2 #(clj-int->frj-int 2)
+                                             :expr3 #(clj-int->frj-int 3)}
+                 sum-frj-ints (fn [& frj-int-eval-funcs]
+                                (clj-int->frj-int (apply + (map #(frj-int->clj-int (%)) frj-int-eval-funcs))))
+                 frj-sum-op (clj-func->frj-func sum-frj-ints 2)
+                 clj-func (frj-op->clj-func frj-sum-op)]
+             (is (frj-op? frj-sum-op))
+             (is (= (clj-func frj-expr-id->clj-eval-func :expr2 :expr3) (clj-int->frj-int 5)))))}
+  [clj-func frj-func-arity]
+  (clj-func->frj-op (fn [frj-expr-id->clj-eval-func & arg-expr-ids]
+                      (apply clj-func (map frj-expr-id->clj-eval-func arg-expr-ids)))
+                    frj-func-arity))
 
 (defn frj->clj
   "Converts a Frajure value to a Clojure value."
